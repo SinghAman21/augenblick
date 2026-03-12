@@ -1,4 +1,7 @@
 node_modules
 dist
 .env
-backend/.env.example.bak
+.env.*
+*.env
+.env.example.bak
+**/.env.example.bak
