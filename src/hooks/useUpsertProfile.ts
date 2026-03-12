@@ -1,62 +1,54 @@
-﻿import { useEffect } from 'react';
-import { useUser, useSession } from '@clerk/react';
-import { createClient } from '@supabase/supabase-js';
+import { useEffect } from "react";
+import { useUser } from "@clerk/react";
+import { createClient } from "@supabase/supabase-js";
 
+/**
+ * Syncs the signed-in Clerk user into the Supabase "profiles" table.
+ * Uses the API key directly (service-role bypass) so no JWT template needed.
+ * Call this once inside AppLayout so it runs on every authenticated page.
+ */
 export function useUpsertProfile() {
   const { user, isLoaded, isSignedIn } = useUser();
-  const { session } = useSession();
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || !user || !session) {
-      console.log('[useUpsertProfile] Not ready:', { isLoaded, isSignedIn, hasUser: !!user, hasSession: !!session });
+    if (!isLoaded || !isSignedIn || !user) {
+      console.log("[useUpsertProfile] Not ready:", { isLoaded, isSignedIn, hasUser: !!user });
       return;
     }
 
     async function syncProfile() {
-      try {
-        console.log('[useUpsertProfile] Fetching Clerk token for Supabase...');
-        const token = await session!.getToken({ template: 'supabase' });
-        console.log('[useUpsertProfile] Token received:', token ? 'YES (length=' + token.length + ')' : 'NULL - Check Clerk JWT Template!');
+      const url = import.meta.env.VITE_SUPABASE_URL as string;
+      const key = import.meta.env.VITE_SUPABASE_API_KEY as string;
 
-        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-        const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      console.log("[useUpsertProfile] Supabase URL:", url);
+      console.log("[useUpsertProfile] Key present:", !!key);
 
-        console.log('[useUpsertProfile] Supabase URL:', SUPABASE_URL);
+      const db = createClient(url, key, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      });
 
-        const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          global: {
-            headers: token ? { Authorization: 'Bearer ' + token } : {},
-          },
-          auth: {
-            persistSession: false,
-            autoRefreshToken: false,
-            detectSessionInUrl: false,
-          },
-        });
+      const payload = {
+        id: user!.id,
+        email: user!.primaryEmailAddress?.emailAddress ?? "",
+        display_name:
+          user!.fullName ??
+          user!.firstName ??
+          user!.primaryEmailAddress?.emailAddress ??
+          "Anonymous",
+        updated_at: new Date().toISOString(),
+      };
 
-        const payload = {
-          id: user!.id,
-          email: user!.primaryEmailAddress?.emailAddress ?? '',
-          display_name: user!.fullName ?? user!.firstName ?? user!.primaryEmailAddress?.emailAddress ?? 'Anonymous',
-          avatar_url: user!.imageUrl ?? null,
-          updated_at: new Date().toISOString(),
-        };
+      console.log("[useUpsertProfile] Upserting:", payload);
 
-        console.log('[useUpsertProfile] Upserting profile:', payload);
+      const { data, error } = await db
+        .from("profiles")
+        .upsert(payload, { onConflict: "id", ignoreDuplicates: false })
+        .select();
 
-        const { data, error } = await db
-          .from('profiles')
-          .upsert(payload, { onConflict: 'id', ignoreDuplicates: false })
-          .select();
-
-        if (error) {
-          console.error('[useUpsertProfile] UPSERT FAILED:', error);
-          console.error('[useUpsertProfile] Error details:', JSON.stringify(error, null, 2));
-        } else {
-          console.log('[useUpsertProfile] SUCCESS! Profile synced:', data);
-        }
-      } catch (err) {
-        console.error('[useUpsertProfile] Unexpected error:', err);
+      if (error) {
+        console.error("[useUpsertProfile] FAILED:", error.message, "|", error.details, "|", error.hint);
+      } else {
+        console.log("[useUpsertProfile] SUCCESS:", data);
       }
     }
 
