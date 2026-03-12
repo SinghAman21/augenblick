@@ -60,6 +60,7 @@ export default function SessionWorkspace() {
   const [sessionTitle, setSessionTitle] = useState("Loading...");
   const [sessionDescription, setSessionDescription] = useState<string | null>(null);
   const [sessionIsPrivate, setSessionIsPrivate] = useState(false);
+  const [sessionOwnerId, setSessionOwnerId] = useState<string | null>(null);
   const [collaboratorCount, setCollaboratorCount] = useState(0);
 
   // Workspace UI
@@ -106,13 +107,14 @@ export default function SessionWorkspace() {
         // 1. Session details
         const { data: sess } = await db
           .from("sessions")
-          .select("title, description, is_private")
+          .select("title, description, is_private, owner_id")
           .eq("id", sessionId)
           .single();
         if (sess) {
           setSessionTitle(sess.title);
           setSessionDescription(sess.description ?? null);
           setSessionIsPrivate(!!sess.is_private);
+          setSessionOwnerId(sess.owner_id ?? null);
         }
 
         // 2. Check if user is a member
@@ -123,7 +125,10 @@ export default function SessionWorkspace() {
           .eq("user_id", user!.id)
           .maybeSingle();
 
-        if (!membership) {
+        const isOwner = (sess?.owner_id ?? null) === user.id;
+        const hasAccess = isOwner || !!membership;
+
+        if (!hasAccess) {
           setIsMember(false);
           return; // Don't try to fetch ideas or subscribe yet
         }
@@ -135,7 +140,7 @@ export default function SessionWorkspace() {
           .from("session_members")
           .select("*", { count: "exact", head: true })
           .eq("session_id", sessionId);
-        setCollaboratorCount(memberCount ?? 0);
+        setCollaboratorCount(Math.max((memberCount ?? 0) - (sess?.owner_id ? 1 : 0), 0));
 
         // 3. Fetch Initial Ideas
         const { data: rawIdeas } = await db
@@ -232,6 +237,12 @@ export default function SessionWorkspace() {
 
   async function handleJoinSession() {
     if (!user || !sessionId) return;
+
+    if (sessionOwnerId === user.id) {
+      setIsMember(true);
+      return;
+    }
+
     setJoining(true);
     const db = getDb();
     
@@ -324,10 +335,14 @@ export default function SessionWorkspace() {
     setLoadingCollaborators(true);
     api.sessions
       .getMembers(sessionId)
-      .then((res) => setCollaborators(res.members))
+      .then((res) =>
+        setCollaborators(
+          res.members.filter((m) => m.role !== "owner" && (!sessionOwnerId || m.user_id !== sessionOwnerId))
+        )
+      )
       .catch(() => toast.error("Failed to load collaborators"))
       .finally(() => setLoadingCollaborators(false));
-  }, [showCollaboratorsModal, sessionId]);
+  }, [showCollaboratorsModal, sessionId, sessionOwnerId]);
 
   useEffect(() => {
     if (!showVotedModal || !sessionId) return;
