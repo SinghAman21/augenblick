@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Plus, Users, Lightbulb, Clock, MoreHorizontal, LayoutGrid, CalendarDays, ExternalLink, Link2, MessageCircle, ThumbsUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useUser } from "@clerk/react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { api, type SessionWithCounts } from "@/lib/api";
 import { toast } from "@/components/ui/sonner";
@@ -32,6 +33,7 @@ const EMOJI_REACTIONS = ["👍", "❤️", "🎯", "🔥", "💡"] as const;
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [sessions, setSessions] = useState<SessionWithCounts[]>([]);
   const [total, setTotal] = useState(0);
   const [commentModalSession, setCommentModalSession] = useState<SessionWithCounts | null>(null);
@@ -39,7 +41,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([api.sessions.list(), api.dashboard.stats()])
+    Promise.all([api.sessions.list(50, 0, user?.id), api.dashboard.stats()])
       .then(([sessionsRes, statsRes]) => {
         setSessions(sessionsRes.sessions);
         setTotal(sessionsRes.total);
@@ -50,7 +52,7 @@ export default function Dashboard() {
         toast.error("Failed to load dashboard");
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [user?.id]);
 
   const getValue = (valueKey: StatKey) => {
     if (loading) return "…";

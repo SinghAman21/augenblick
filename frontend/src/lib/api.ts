@@ -71,8 +71,10 @@ export const api = {
     },
   },
   sessions: {
-    list(limit = 50, offset = 0) {
-      return request<SessionListResponse>(`/sessions?limit=${limit}&offset=${offset}`);
+    list(limit = 50, offset = 0, userId?: string) {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (userId) params.append('userId', userId);
+      return request<SessionListResponse>(`/sessions?${params.toString()}`);
     },
 
     getById(id: string) {

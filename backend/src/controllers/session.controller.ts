@@ -30,14 +30,51 @@ const updateSessionSchema = z.object({
 
 // ── Handlers ──────────────────────────────────────────────────
 
-/** GET /sessions?limit=50&offset=0 – returns sessions with idea_count, comment_count, vote_count */
+/** GET /sessions?limit=50&offset=0&userId=xxx – returns sessions with idea_count, comment_count, vote_count */
 export const listSessions = asyncHandler(async (req: Request, res: Response) => {
   const limit = Math.min(Number(req.query.limit) || 50, 100);
   const offset = Number(req.query.offset) || 0;
+  const userId = req.query.userId as string | undefined;
 
-  const { data: sessions, error, count } = await supabase
+  let sessionIds: string[] = [];
+
+  // If userId is provided, get sessions owned by user or where user is a member
+  if (userId) {
+    // Get all sessions owned by the user
+    const { data: ownedSessions } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('owner_id', userId);
+
+    const ownedSessionIds = ownedSessions?.map((s) => s.id) ?? [];
+
+    // Get all sessions where user is a member
+    const { data: memberSessions } = await supabase
+      .from('session_members')
+      .select('session_id')
+      .eq('user_id', userId);
+
+    const memberSessionIds = memberSessions?.map((m) => m.session_id) ?? [];
+
+    // Combine both lists (removing duplicates)
+    sessionIds = Array.from(new Set([...ownedSessionIds, ...memberSessionIds]));
+
+    if (sessionIds.length === 0) {
+      res.json({ ok: true, sessions: [], total: 0 });
+      return;
+    }
+  }
+
+  let query = supabase
     .from('sessions')
-    .select('*', { count: 'exact' })
+    .select('*', { count: 'exact' });
+
+  // Filter by the calculated session IDs if userId was provided
+  if (userId && sessionIds.length > 0) {
+    query = query.in('id', sessionIds);
+  }
+
+  const { data: sessions, error, count } = await query
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -47,8 +84,8 @@ export const listSessions = asyncHandler(async (req: Request, res: Response) => 
     return;
   }
 
-  const sessionIds = sessions.map((s) => s.id);
-  const { data: ideas } = await supabase.from('ideas').select('id, session_id').in('session_id', sessionIds);
+  const sessionIdList = sessions.map((s) => s.id);
+  const { data: ideas } = await supabase.from('ideas').select('id, session_id').in('session_id', sessionIdList);
   const ideaIds = ideas?.map((i) => i.id) ?? [];
   const sessionIdToIdeas = new Map<string, { id: string }[]>();
   for (const i of ideas ?? []) {

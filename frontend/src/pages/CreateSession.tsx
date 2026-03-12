@@ -93,13 +93,13 @@ export default function CreateSession() {
               </SelectContent>
             </Select>
           </div>
-          <div className="flex items-center justify-between surface-raised p-4">
+          {/* <div className="flex items-center justify-between surface-raised p-4">
             <div>
               <p className="text-sm font-medium">Private Session</p>
               <p className="text-[11px] text-muted-foreground">Only invited members can join</p>
             </div>
             <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
-          </div>
+          </div> */}
           <button type="submit" disabled={isSubmitting} className="btn-primary flex items-center gap-2 w-full justify-center mt-2 disabled:opacity-60">
             {isSubmitting ? "Creating..." : "Create Session"} <ArrowRight className="w-4 h-4" />
           </button>

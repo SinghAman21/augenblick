@@ -5,7 +5,7 @@ import type { Request, Response, NextFunction, RequestHandler } from 'express';
  * error handling instead of crashing the process.
  */
 export function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<void>,
+  fn: (req: Request, res: Response, next?: NextFunction) => Promise<any>,
 ): RequestHandler {
   return (req, res, next) => {
     Promise.resolve(fn(req, res, next)).catch(next);
