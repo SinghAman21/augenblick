@@ -1,27 +1,42 @@
-import { integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+// ── users ──────────────────────────────────────────────────────────────────
+export interface User {
+  id: number;
+  name: string;
+  age: number;
+  email: string;
+}
 
-export const usersTable = pgTable('users_table', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  age: integer('age').notNull(),
-  email: text('email').notNull().unique(),
-});
+export type InsertUser = Omit<User, 'id'>;
+export type SelectUser = User;
 
-export const postsTable = pgTable('posts_table', {
-  id: serial('id').primaryKey(),
-  title: text('title').notNull(),
-  content: text('content').notNull(),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => usersTable.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at')
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+// ── posts ──────────────────────────────────────────────────────────────────
+export interface Post {
+  id: number;
+  title: string;
+  content: string;
+  user_id: number;
+  created_at: string;
+  updated_at: string;
+}
 
-export type InsertUser = typeof usersTable.$inferInsert;
-export type SelectUser = typeof usersTable.$inferSelect;
+export type InsertPost = Omit<Post, 'id' | 'created_at' | 'updated_at'>;
+export type SelectPost = Post;
 
-export type InsertPost = typeof postsTable.$inferInsert;
-export type SelectPost = typeof postsTable.$inferSelect;
+// ── sessions ───────────────────────────────────────────────────────────────
+export interface Session {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  is_private: boolean;
+  owner_id: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InsertSession = Omit<Session, 'id' | 'created_at' | 'updated_at' | 'owner_id' | 'status'> & {
+  owner_id?: string | null;
+  status?: string;
+};
+export type SelectSession = Session;
