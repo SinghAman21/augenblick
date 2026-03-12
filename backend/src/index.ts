@@ -8,7 +8,6 @@ import morgan from 'morgan';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { sessionRoutes, dashboardRoutes, ideaRoutes, aiRoutes } from './route/index.js';
-import { env } from './config/env.js';
 
 const app = express();
 const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
