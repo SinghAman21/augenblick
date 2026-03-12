@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import { useUser } from "@clerk/react";
 import { AppLayout } from "@/components/app/AppLayout";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import { api } from "@/lib/api";
 
 export default function CreateSession() {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("product");
@@ -26,6 +28,11 @@ export default function CreateSession() {
       return;
     }
 
+    if (!user?.id) {
+      toast.error("You must be signed in to create a session");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -34,12 +41,15 @@ export default function CreateSession() {
         description: description.trim() || null,
         category,
         is_private: isPrivate,
+        owner_id: user.id,
+        owner_email: user.primaryEmailAddress?.emailAddress ?? '',
+        owner_display_name: user.fullName ?? user.firstName ?? '',
       });
 
       toast.success("Session created");
       navigate(`/session/${session.id}`);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create session");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create session");
     } finally {
       setIsSubmitting(false);
     }

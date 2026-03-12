@@ -4,4 +4,6 @@ export {
   createSession,
   updateSession,
   deleteSession,
+  getSessionMembers,
+  getSessionVoters,
 } from './session.controller.js';

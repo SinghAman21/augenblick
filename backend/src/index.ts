@@ -7,7 +7,7 @@ import morgan from 'morgan';
 
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
-import { sessionRoutes } from './route/index.js';
+import { sessionRoutes, dashboardRoutes, ideaRoutes } from './route/index.js';
 
 const app = express();
 const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
@@ -46,6 +46,8 @@ app.get('/api/health', (_req, res) => {
 
 // ── Routes ─────────────────────────────────────────────
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/ideas', ideaRoutes);
 
 // ── Error handling (must be last) ──────────────────────
 app.use(errorHandler);

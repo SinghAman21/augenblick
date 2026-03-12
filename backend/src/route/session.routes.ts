@@ -5,11 +5,15 @@ import {
   createSession,
   updateSession,
   deleteSession,
+  getSessionMembers,
+  getSessionVoters,
 } from '../controllers/index.js';
 
 const router = Router();
 
 router.get('/', listSessions);
+router.get('/:id/members', getSessionMembers);
+router.get('/:id/voters', getSessionVoters);
 router.get('/:id', getSessionById);
 router.post('/', createSession);
 router.patch('/:id', updateSession);

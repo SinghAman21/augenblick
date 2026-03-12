@@ -7,7 +7,8 @@
 
 
 @layer base {
-  :root {
+  :root,
+  [data-theme="default"] {
     --background: 40 6% 7%;
     --foreground: 40 20% 92%;
 
@@ -46,6 +47,48 @@
     --sidebar-accent-foreground: 40 20% 92%;
     --sidebar-border: 40 5% 14%;
     --sidebar-ring: 32 95% 58%;
+  }
+
+  /* Claude AI–like theme: warm cream/off-white, soft browns, terracotta accent */
+  [data-theme="claude"] {
+    --background: 40 22% 97%;
+    --foreground: 30 12% 18%;
+
+    --card: 40 25% 94%;
+    --card-foreground: 30 12% 18%;
+
+    --popover: 40 25% 94%;
+    --popover-foreground: 30 12% 18%;
+
+    --primary: 24 55% 45%;
+    --primary-foreground: 40 22% 97%;
+
+    --secondary: 35 25% 55%;
+    --secondary-foreground: 40 22% 97%;
+
+    --muted: 40 15% 91%;
+    --muted-foreground: 30 8% 42%;
+
+    --accent: 24 45% 55%;
+    --accent-foreground: 40 22% 97%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 18% 88%;
+    --input: 40 18% 88%;
+    --ring: 24 55% 45%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 40 20% 94%;
+    --sidebar-foreground: 30 12% 22%;
+    --sidebar-primary: 24 55% 45%;
+    --sidebar-primary-foreground: 40 22% 97%;
+    --sidebar-accent: 40 18% 90%;
+    --sidebar-accent-foreground: 30 12% 18%;
+    --sidebar-border: 40 15% 88%;
+    --sidebar-ring: 24 55% 45%;
   }
 }
 
@@ -108,22 +151,28 @@
   }
 
   .idea-card {
-    @apply rounded-lg p-4 transition-all duration-200;
+    @apply rounded-xl p-4 transition-all duration-200;
   }
 
   .idea-card:hover {
     transform: translateY(-2px);
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.25);
   }
 
-  .idea-warm { background: hsl(38 90% 62%); color: hsl(38 40% 12%); }
-  .idea-teal { background: hsl(170 55% 50%); color: hsl(170 40% 10%); }
-  .idea-rose { background: hsl(350 70% 65%); color: hsl(350 40% 12%); }
-  .idea-sand { background: hsl(45 40% 75%); color: hsl(45 30% 15%); }
-  .idea-mint { background: hsl(155 45% 55%); color: hsl(155 35% 10%); }
-  .idea-coral { background: hsl(15 80% 60%); color: hsl(15 50% 12%); }
+  /* Bright variant (original) for contrast */
+  .idea-warm { background: linear-gradient(135deg, hsl(32 95% 58% / 0.95), hsl(32 90% 52% / 0.9)); color: hsl(38 45% 12%); }
+  .idea-teal { background: linear-gradient(135deg, hsl(170 55% 48% / 0.95), hsl(170 50% 42% / 0.9)); color: hsl(170 45% 10%); }
+  .idea-rose { background: linear-gradient(135deg, hsl(350 70% 62% / 0.95), hsl(350 65% 56% / 0.9)); color: hsl(350 45% 12%); }
+  .idea-sand { background: linear-gradient(135deg, hsl(45 45% 72% / 0.95), hsl(45 40% 66% / 0.9)); color: hsl(45 35% 14%); }
+  .idea-mint { background: linear-gradient(135deg, hsl(155 48% 52% / 0.95), hsl(155 42% 46% / 0.9)); color: hsl(155 40% 10%); }
+  .idea-coral { background: linear-gradient(135deg, hsl(15 78% 58% / 0.95), hsl(15 72% 52% / 0.9)); color: hsl(15 55% 12%); }
 
   .dot-grid {
-    background-image: radial-gradient(circle, hsl(40 10% 25%) 1px, transparent 1px);
-    background-size: 20px 20px;
+    background-image: radial-gradient(circle, hsl(40 8% 22%) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  [data-theme="claude"] .dot-grid {
+    background-image: radial-gradient(circle, hsl(40 10% 82%) 1px, transparent 1px);
   }
 }

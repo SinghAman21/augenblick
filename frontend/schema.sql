@@ -108,11 +108,21 @@ CREATE TABLE IF NOT EXISTS idea_comments (
 id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
 idea_id     UUID        NOT NULL REFERENCES ideas(id) ON DELETE CASCADE,
 author_id   TEXT        REFERENCES profiles(id) ON DELETE SET NULL,
-parent_id   UUID        REFERENCES comments(id) ON DELETE CASCADE,
+parent_id   UUID        REFERENCES idea_comments(id) ON DELETE CASCADE,
 body        TEXT        NOT NULL,
 is_deleted  BOOLEAN     DEFAULT false,
 created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
 updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ── idea_comment_votes (votes on comments) ─────────────────────
+CREATE TABLE IF NOT EXISTS idea_comment_votes (
+id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+comment_id UUID        NOT NULL REFERENCES idea_comments(id) ON DELETE CASCADE,
+user_id    TEXT        NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+value      SMALLINT    NOT NULL CHECK (value IN (1,-1)),
+created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+UNIQUE(comment_id, user_id)
 );
 
 -- ── ai_chats ──────────────────────────────────────────────────
