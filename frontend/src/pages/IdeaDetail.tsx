@@ -11,16 +11,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { api, type IdeaWithVotes, type IdeaComment } from "@/lib/api";
 import { toast } from "@/components/ui/sonner";
 import { Loader2 } from "lucide-react";
+import { askGrok } from "@/api/ai";
 
 const variations = [
   "Smart questionnaire on first launch",
   "Adaptive tutorial based on skill level",
-];
-
-const aiSuggestions = [
-  "Try a freemium onboarding to learn adoption patterns.",
-  "Very progressive dialogues for complex features/onboarding.",
-  "Adaptive and personalized success stories during onboarding.",
 ];
 
 function formatTimeAgo(dateStr: string) {
@@ -46,6 +41,8 @@ export default function IdeaDetail() {
   const [votingIdea, setVotingIdea] = useState<"up" | "down" | null>(null);
   const [votingCommentId, setVotingCommentId] = useState<string | null>(null);
   const [postingComment, setPostingComment] = useState(false);
+  const [aiExpandLoading, setAiExpandLoading] = useState(false);
+  const [aiExpandText, setAiExpandText] = useState<string | null>(null);
 
   const loadIdea = () => {
     if (!ideaId) return;
@@ -101,6 +98,21 @@ export default function IdeaDetail() {
       toast.error("Failed to vote on comment");
     } finally {
       setVotingCommentId(null);
+    }
+  };
+
+  const handleAIExpand = async () => {
+    if (!idea) return;
+    setAiExpandLoading(true);
+    setAiExpandText(null);
+    try {
+      const prompt = [idea.title, idea.description].filter(Boolean).join(" — ");
+      const { text } = await askGrok({ action: "expand", prompt: prompt || idea.title });
+      setAiExpandText(text);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI request failed");
+    } finally {
+      setAiExpandLoading(false);
     }
   };
 
@@ -227,16 +239,22 @@ export default function IdeaDetail() {
               </TabsContent>
 
               <TabsContent value="ai-expand" className="mt-6 space-y-4">
-                <div className="space-y-3">
-                  {aiSuggestions.map((s, i) => (
-                    <div key={i} className="flex items-center gap-3 surface-raised p-3 rounded-lg">
-                      <Lightbulb className="w-4 h-4 text-primary shrink-0" />
-                      <p className="text-sm flex-1">{s}</p>
-                      <Button size="sm" variant="outline" className="shrink-0">Add</Button>
-                    </div>
-                  ))}
-                </div>
-                <Button variant="outline" size="sm">Regenerate</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAIExpand}
+                  disabled={aiExpandLoading}
+                >
+                  {aiExpandLoading ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> Expanding…</> : "Expand with AI"}
+                </Button>
+                {aiExpandText && (
+                  <div className="surface-raised p-4 rounded-lg">
+                    <p className="text-sm whitespace-pre-line">{aiExpandText}</p>
+                  </div>
+                )}
+                {!aiExpandText && !aiExpandLoading && (
+                  <p className="text-sm text-muted-foreground">Click &quot;Expand with AI&quot; to get variations and elaboration for this idea.</p>
+                )}
               </TabsContent>
             </Tabs>
           </div>

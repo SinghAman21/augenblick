@@ -7,7 +7,8 @@ import morgan from 'morgan';
 
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
-import { sessionRoutes, dashboardRoutes, ideaRoutes } from './route/index.js';
+import { sessionRoutes, dashboardRoutes, ideaRoutes, aiRoutes } from './route/index.js';
+import { env } from './config/env.js';
 
 const app = express();
 const allowedOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
@@ -41,13 +42,14 @@ app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ── Health check ───────────────────────────────────────
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, uptime: process.uptime() });
+  res.json({ ok: true, uptime: process.uptime(), aiConfigured: !!(env.GROQ_API_KEY || env.XAI_API_KEY) });
 });
 
 // ── Routes ─────────────────────────────────────────────
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/ideas', ideaRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ── Error handling (must be last) ──────────────────────
 app.use(errorHandler);

@@ -1,30 +1,51 @@
 import { motion } from "framer-motion";
-import { Sparkles, Lightbulb, Expand, Link2, FileText, Send } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Sparkles, Lightbulb, Expand, Link2, FileText, Send, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { askGrok, type AIAction } from "@/api/ai";
 
-const aiMessages = [
-  { role: "user" as const, text: "Give me 5 ideas for improving remote team culture" },
-  { role: "ai" as const, text: "1. Virtual coffee roulette\n2. Async show-and-tell channel\n3. Monthly \"demo day\" for side projects\n4. Team rituals bot\n5. Peer recognition board" },
-  { role: "user" as const, text: "Expand on #4 — Team rituals bot" },
-  { role: "ai" as const, text: "A Slack/Teams bot that prompts daily check-ins, weekly wins, and monthly retrospectives. Configurable cadence, auto-summarizes responses, tracks sentiment over time." },
+const capabilities: { icon: typeof Lightbulb; label: string; action: AIAction }[] = [
+  { icon: Lightbulb, label: "Generate from prompts", action: "generate" },
+  { icon: Expand, label: "Expand any idea", action: "expand" },
+  { icon: Link2, label: "Find connections", action: "related" },
+  { icon: FileText, label: "Summarize sessions", action: "summarize" },
 ];
 
-const capabilities = [
-  { icon: Lightbulb, label: "Generate from prompts" },
-  { icon: Expand, label: "Expand any idea" },
-  { icon: Link2, label: "Find connections" },
-  { icon: FileText, label: "Summarize sessions" },
-];
+type Message = { role: "user" | "ai"; text: string };
 
 export function AIPoweredSection() {
-  const [visibleMessages, setVisibleMessages] = useState(0);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setVisibleMessages((v) => (v < aiMessages.length ? v + 1 : v));
-    }, 1400);
-    return () => clearInterval(interval);
-  }, []);
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const send = async (promptText: string, action: AIAction = "chat") => {
+    const trimmed = promptText.trim();
+    if (!trimmed || loading) return;
+    setError(null);
+    setMessages((prev) => [...prev, { role: "user", text: trimmed }]);
+    setInput("");
+    setLoading(true);
+    try {
+      const { text } = await askGrok({ action, prompt: trimmed });
+      setMessages((prev) => [...prev, { role: "ai", text }]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "AI request failed";
+      setError(msg);
+      setMessages((prev) => [...prev, { role: "ai", text: `Error: ${msg}` }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    send(input, "chat");
+  };
 
   return (
     <section id="ai" className="py-24 border-t border-border/50">
@@ -55,12 +76,15 @@ export function AIPoweredSection() {
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
               <Sparkles className="w-4 h-4 text-primary" />
               <span className="font-semibold text-sm">AI Assistant</span>
-              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-secondary" />
-              <span className="text-mono text-[10px] text-muted-foreground">online</span>
+              <span className={`ml-auto w-1.5 h-1.5 rounded-full ${loading ? "bg-amber-500 animate-pulse" : "bg-secondary"}`} />
+              <span className="text-mono text-[10px] text-muted-foreground">{loading ? "thinking…" : "online"}</span>
             </div>
 
-            <div className="space-y-3 min-h-[200px]">
-              {aiMessages.slice(0, visibleMessages).map((msg, i) => (
+            <div className="space-y-3 min-h-[200px] max-h-[320px] overflow-y-auto">
+              {messages.length === 0 && (
+                <p className="text-xs text-muted-foreground py-4">Ask for ideas, expand a concept, or get a session summary.</p>
+              )}
+              {messages.map((msg, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 8 }}
@@ -76,17 +100,23 @@ export function AIPoweredSection() {
                   </div>
                 </motion.div>
               ))}
+              {error && <p className="text-xs text-destructive">{error}</p>}
+              <div ref={bottomRef} />
             </div>
 
-            <div className="mt-4 flex items-center gap-2 surface-inset px-3 py-2">
+            <form onSubmit={handleSubmit} className="mt-4 flex items-center gap-2 surface-inset px-3 py-2">
               <input
                 type="text"
                 placeholder="Ask AI to brainstorm..."
                 className="flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
-                readOnly
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                disabled={loading}
               />
-              <Send className="w-3.5 h-3.5 text-primary" />
-            </div>
+              <button type="submit" disabled={loading} className="shrink-0 text-primary hover:opacity-80 disabled:opacity-50">
+                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              </button>
+            </form>
           </motion.div>
 
           {/* Capabilities — 2 cols */}
@@ -98,19 +128,31 @@ export function AIPoweredSection() {
             className="lg:col-span-2 space-y-3"
           >
             {capabilities.map((cap, i) => (
-              <motion.div
+              <motion.button
                 key={cap.label}
+                type="button"
                 initial={{ opacity: 0, x: 15 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
-                className="surface-raised p-4 flex items-center gap-3 hover:border-primary/30 transition-colors"
+                className="w-full surface-raised p-4 flex items-center gap-3 hover:border-primary/30 transition-colors text-left disabled:opacity-60"
+                onClick={() => {
+                  const prompts: Record<AIAction, string> = {
+                    generate: "Generate 5 creative ideas for improving team collaboration",
+                    expand: "Expand on the idea: AI-powered meeting summaries",
+                    related: "Suggest related ideas for: remote work productivity",
+                    summarize: "Summarize key themes and next steps",
+                    chat: "How can we brainstorm better?",
+                  };
+                  send(prompts[cap.action] || prompts.chat, cap.action);
+                }}
+                disabled={loading}
               >
                 <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
                   <cap.icon className="w-4 h-4 text-primary" />
                 </div>
                 <span className="text-sm font-medium">{cap.label}</span>
-              </motion.div>
+              </motion.button>
             ))}
           </motion.div>
         </div>

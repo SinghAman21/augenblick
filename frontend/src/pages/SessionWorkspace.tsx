@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { api, type SessionMember, type SessionVoter } from "@/lib/api";
 import { toast } from "@/components/ui/sonner";
+import { askGrok } from "@/api/ai";
 
 const COLORS = ["idea-warm", "idea-teal", "idea-rose", "idea-sand", "idea-mint", "idea-coral"];
 
@@ -66,6 +67,10 @@ export default function SessionWorkspace() {
   const [filterCategory, setFilterCategory] = useState<string>("All");
   const [aiTab, setAiTab] = useState<"generate" | "summary" | "elaboration">("generate");
   const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiGenerateResult, setAiGenerateResult] = useState<string | null>(null);
+  const [aiSummaryResult, setAiSummaryResult] = useState<string | null>(null);
+  const [aiElaborationResult, setAiElaborationResult] = useState<string | null>(null);
 
   // Share link state
   const [copied, setCopied] = useState(false);
@@ -250,6 +255,48 @@ export default function SessionWorkspace() {
     navigator.clipboard.writeText(window.location.href);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleAIGenerate() {
+    const prompt = aiPrompt.trim() || "Generate starter ideas for a brainstorming session.";
+    setAiLoading(true);
+    setAiGenerateResult(null);
+    try {
+      const { text } = await askGrok({ action: "generate", prompt });
+      setAiGenerateResult(text);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI request failed");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function handleAISummary() {
+    setAiLoading(true);
+    setAiSummaryResult(null);
+    try {
+      const ideasList = ideas.map((i) => i.title).filter(Boolean);
+      const { text } = await askGrok({ action: "summarize", ideas: ideasList });
+      setAiSummaryResult(text);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI request failed");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  async function handleAIElaborate(ideaTitle?: string) {
+    const prompt = ideaTitle?.trim() || topIdeas[0]?.title || "Expand this idea";
+    setAiLoading(true);
+    setAiElaborationResult(null);
+    try {
+      const { text } = await askGrok({ action: "expand", prompt });
+      setAiElaborationResult(text);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "AI request failed");
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   const totalVotes = useMemo(() => ideas.reduce((s, i) => s + i.votes, 0), [ideas]);
@@ -570,8 +617,21 @@ export default function SessionWorkspace() {
                       value={aiPrompt}
                       onChange={(e) => setAiPrompt(e.target.value)}
                       className="bg-muted/30 border-border text-sm resize-none"
+                      disabled={aiLoading}
                     />
-                    <button className="btn-primary w-full text-xs py-2">Generate</button>
+                    <button
+                      type="button"
+                      className="btn-primary w-full text-xs py-2 flex items-center justify-center gap-2"
+                      onClick={handleAIGenerate}
+                      disabled={aiLoading}
+                    >
+                      {aiLoading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating…</> : "Generate"}
+                    </button>
+                    {aiGenerateResult && (
+                      <div className="p-2 rounded-lg bg-muted/50 border border-border text-xs whitespace-pre-line">
+                        {aiGenerateResult}
+                      </div>
+                    )}
                     <div className="space-y-2">
                       {topIdeas.slice(0, 2).map((i) => (
                         <div key={i.id} className="flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
@@ -581,11 +641,41 @@ export default function SessionWorkspace() {
                       ))}
                     </div>
                   </TabsContent>
-                  <TabsContent value="summary" className="flex-1 p-3 mt-0 overflow-auto text-xs text-muted-foreground">
-                    <p>Session summary will appear here after ideas are added.</p>
+                  <TabsContent value="summary" className="flex-1 p-3 mt-0 overflow-auto space-y-3 text-xs text-muted-foreground">
+                    <button
+                      type="button"
+                      className="btn-primary w-full text-xs py-2 flex items-center justify-center gap-2"
+                      onClick={handleAISummary}
+                      disabled={aiLoading || ideas.length === 0}
+                    >
+                      {aiLoading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Summarizing…</> : "Summarize session"}
+                    </button>
+                    {ideas.length === 0 && <p>Add ideas first, then run summary.</p>}
+                    {aiSummaryResult && (
+                      <div className="p-2 rounded-lg bg-muted/50 border border-border text-foreground whitespace-pre-line">
+                        {aiSummaryResult}
+                      </div>
+                    )}
                   </TabsContent>
-                  <TabsContent value="elaboration" className="flex-1 p-3 mt-0 overflow-auto text-xs text-muted-foreground">
-                    <p>Select an idea to see AI elaboration options.</p>
+                  <TabsContent value="elaboration" className="flex-1 p-3 mt-0 overflow-auto space-y-3 text-xs text-muted-foreground">
+                    <p>Pick an idea to expand with AI.</p>
+                    {topIdeas.slice(0, 3).map((i) => (
+                      <button
+                        key={i.id}
+                        type="button"
+                        className="w-full flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/30 border border-border hover:border-primary/30 text-left"
+                        onClick={() => handleAIElaborate(i.title)}
+                        disabled={aiLoading}
+                      >
+                        <span className="truncate">{i.title}</span>
+                        <span className="text-primary shrink-0">Expand</span>
+                      </button>
+                    ))}
+                    {aiElaborationResult && (
+                      <div className="p-2 rounded-lg bg-muted/50 border border-border text-foreground whitespace-pre-line">
+                        {aiElaborationResult}
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
                 <div className="p-3 border-t border-border">
