@@ -16,7 +16,7 @@ export interface AIResponse {
   text: string;
 }
 
-const API_BASE = "/api";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
 /** Check if the backend is reachable (frontend connected to backend). */
 export async function checkBackendConnection(): Promise<{
