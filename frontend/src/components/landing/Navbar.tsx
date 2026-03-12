@@ -50,10 +50,10 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-2">
-          <Link to="/dashboard">
+          <Link to="/sign-in">
             <button className="btn-outline text-sm px-4 py-1.5">Log in</button>
           </Link>
-          <Link to="/dashboard">
+          <Link to="/sign-up">
             <button className="btn-primary text-sm px-4 py-1.5">Get Started →</button>
           </Link>
         </div>
@@ -74,7 +74,7 @@ export function Navbar() {
               {link.label}
             </a>
           ))}
-          <Link to="/dashboard" className="block mt-2">
+          <Link to="/sign-up" className="block mt-2">
             <button className="btn-primary text-sm w-full py-2">Get Started →</button>
           </Link>
         </motion.div>

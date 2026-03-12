@@ -43,7 +43,7 @@ export function HeroSection() {
             </p>
 
             <div className="flex flex-wrap gap-3 mb-12">
-              <Link to="/dashboard">
+              <Link to="/sign-up">
                 <button className="btn-primary flex items-center gap-2">
                   Start brainstorming
                   <ArrowRight className="w-4 h-4" />

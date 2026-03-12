@@ -22,7 +22,7 @@ export function CTASection() {
             <p className="text-muted-foreground mb-6">
               Free to start. No credit card. Set up in under a minute.
             </p>
-            <Link to="/dashboard">
+            <Link to="/sign-up">
               <button className="btn-primary flex items-center gap-2">
                 Create workspace
                 <ArrowRight className="w-4 h-4" />
