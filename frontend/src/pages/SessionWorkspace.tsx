@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/app/AppLayout";
+import { getSupabaseClient } from "@/lib/supabase";
 import { Share, Download, Plus, ThumbsUp, MessageCircle, Sparkles, Send, Lightbulb, Expand, Link2, FileText, GripVertical, Loader2, X, Check, Users as UsersIcon } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useUser } from "@clerk/react";
-import { createClient } from "@supabase/supabase-js";
 
 const COLORS = ["idea-warm", "idea-teal", "idea-rose", "idea-sand", "idea-mint", "idea-coral"];
 
@@ -54,11 +54,7 @@ export default function SessionWorkspace() {
   const [copied, setCopied] = useState(false);
 
   function getDb() {
-    return createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_API_KEY,
-      { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
-    );
+    return getSupabaseClient();
   }
 
   // Load session details + membership + ideas + Realtime WebSockets

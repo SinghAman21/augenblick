@@ -1,7 +1,7 @@
-import { LayoutDashboard, Zap, Sparkles, Settings, Lightbulb } from "lucide-react";
+import { LayoutDashboard, Sparkles, Settings, Lightbulb, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { Link } from "react-router-dom";
-import { UserButton, useUser } from "@clerk/react";
+import { UserButton, useClerk, useUser } from "@clerk/react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter,
@@ -18,6 +18,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const { user } = useUser();
+  const { signOut } = useClerk();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -57,18 +58,29 @@ export function AppSidebar() {
 
       {/* User footer */}
       <SidebarFooter className="border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-2.5">
-          <UserButton afterSignOutUrl="/" />
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="text-xs font-medium truncate">
-                {user?.fullName ?? user?.primaryEmailAddress?.emailAddress}
-              </p>
-              <p className="text-[10px] text-muted-foreground truncate">
-                {user?.primaryEmailAddress?.emailAddress}
-              </p>
-            </div>
-          )}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2.5">
+            <UserButton afterSignOutUrl="/" />
+            {!collapsed && (
+              <div className="min-w-0">
+                <p className="text-xs font-medium truncate">
+                  {user?.fullName ?? user?.primaryEmailAddress?.emailAddress}
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {user?.primaryEmailAddress?.emailAddress}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => signOut({ redirectUrl: "/" })}
+            className="w-full flex items-center gap-2 rounded-md px-2.5 py-2 text-xs text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5 shrink-0" />
+            {!collapsed && <span>Log out</span>}
+            {collapsed && <span className="sr-only">Log out</span>}
+          </button>
         </div>
       </SidebarFooter>
     </Sidebar>

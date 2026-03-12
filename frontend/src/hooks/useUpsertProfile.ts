@@ -18,10 +18,18 @@ export function useUpsertProfile() {
 
     async function syncProfile() {
       const url = import.meta.env.VITE_SUPABASE_URL as string;
-      const key = import.meta.env.VITE_SUPABASE_API_KEY as string;
+      const key =
+        (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
+        (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
+        (import.meta.env.VITE_SUPABASE_API_KEY as string | undefined);
 
       console.log("[useUpsertProfile] Supabase URL:", url);
       console.log("[useUpsertProfile] Key present:", !!key);
+
+      if (!url || !key) {
+        console.error("[useUpsertProfile] Missing Supabase env vars");
+        return;
+      }
 
       const db = createClient(url, key, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
