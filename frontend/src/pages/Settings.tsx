@@ -6,9 +6,9 @@ import { Switch } from "@/components/ui/switch";
 export default function SettingsPage() {
   return (
     <AppLayout>
-      <div className="p-6 lg:p-8 max-w-xl">
+      <div className="p-6 lg:p-8 w-full max-w-7xl mx-auto">
         <h1 className="text-display text-2xl mb-6">Settings</h1>
-        <div className="space-y-5">
+        <div className="grid lg:grid-cols-2 gap-5 max-w-5xl">
           <div className="surface-raised p-5 space-y-4">
             <h3 className="text-mono text-xs text-muted-foreground uppercase tracking-widest">General</h3>
             <div className="space-y-1.5">

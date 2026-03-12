@@ -7,7 +7,6 @@ import {
 
 const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Sessions", url: "/session/create", icon: Zap },
   { title: "AI Assistant", url: "/ai", icon: Sparkles },
   { title: "Profile", url: "/profile", icon: User },
   { title: "Settings", url: "/settings", icon: Settings },

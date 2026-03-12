@@ -20,7 +20,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="p-6 lg:p-8 max-w-5xl">
+      <div className="p-6 lg:p-8 w-full max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-display text-2xl">Dashboard</h1>
