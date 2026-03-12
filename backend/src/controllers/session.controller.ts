@@ -176,6 +176,23 @@ export const createSession = asyncHandler(async (req: Request, res: Response) =>
 
   if (error) throw ApiError.internal(error.message);
 
+  // Ensure the creator is recorded as an owner member as well.
+  // This keeps membership checks consistent in the workspace UI.
+  if (body.owner_id && data?.id) {
+    const { error: ownerMemberError } = await supabase
+      .from('session_members')
+      .upsert(
+        {
+          session_id: data.id,
+          user_id: body.owner_id,
+          role: 'owner',
+        },
+        { onConflict: 'session_id,user_id' }
+      );
+
+    if (ownerMemberError) throw ApiError.internal(ownerMemberError.message);
+  }
+
   res.status(201).json({ ok: true, session: data });
 });
 
@@ -214,6 +231,33 @@ export const deleteSession = asyncHandler(async (req: Request, res: Response) =>
 export const getSessionMembers = asyncHandler(async (req: Request, res: Response) => {
   const { id: sessionId } = req.params;
 
+  const { data: sessionMeta, error: sessionMetaError } = await supabase
+    .from('sessions')
+    .select('owner_id, created_at')
+    .eq('id', sessionId)
+    .maybeSingle();
+
+  if (sessionMetaError) throw ApiError.internal(sessionMetaError.message);
+
+  const ownerId = sessionMeta?.owner_id ?? null;
+
+  // Auto-repair: owner should always be stored as role=owner in session_members.
+  if (ownerId) {
+    const { error: ownerRoleFixError } = await supabase
+      .from('session_members')
+      .upsert(
+        {
+          session_id: sessionId,
+          user_id: ownerId,
+          role: 'owner',
+          joined_at: sessionMeta?.created_at ?? new Date().toISOString(),
+        },
+        { onConflict: 'session_id,user_id' }
+      );
+
+    if (ownerRoleFixError) throw ApiError.internal(ownerRoleFixError.message);
+  }
+
   const { data: members, error: membersError } = await supabase
     .from('session_members')
     .select('user_id, role, joined_at')
@@ -231,7 +275,7 @@ export const getSessionMembers = asyncHandler(async (req: Request, res: Response
         .maybeSingle();
       return {
         user_id: m.user_id,
-        role: m.role,
+        role: m.user_id === ownerId ? 'owner' : m.role,
         joined_at: m.joined_at,
         display_name: profile?.display_name ?? null,
         email: profile?.email ?? null,

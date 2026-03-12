@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useAuth } from "@clerk/react";
+import { GlobalThemeToggle } from "@/components/app/GlobalThemeToggle";
 import Index from "./pages/Index.tsx";
 import Dashboard from "./pages/Dashboard.tsx";
 import CreateSession from "./pages/CreateSession.tsx";
@@ -34,25 +35,26 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-        <Routes>
-          {/* Public */}
-          <Route path="/" element={<Index />} />
-          <Route path="/sign-in/*" element={<SignInPage />} />
-          <Route path="/sign-up/*" element={<SignUpPage />} />
+          <GlobalThemeToggle />
+          <Routes>
+            {/* Public */}
+            <Route path="/" element={<Index />} />
+            <Route path="/sign-in/*" element={<SignInPage />} />
+            <Route path="/sign-up/*" element={<SignUpPage />} />
 
-          {/* Protected */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/session/create" element={<ProtectedRoute><CreateSession /></ProtectedRoute>} />
-          <Route path="/session/:sessionId" element={<ProtectedRoute><SessionWorkspace /></ProtectedRoute>} />
-          <Route path="/session/:sessionId/ideas/:ideaId" element={<ProtectedRoute><IdeaDetail /></ProtectedRoute>} />
-          <Route path="/ai" element={<ProtectedRoute><AIPage /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            {/* Protected */}
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/session/create" element={<ProtectedRoute><CreateSession /></ProtectedRoute>} />
+            <Route path="/session/:sessionId" element={<ProtectedRoute><SessionWorkspace /></ProtectedRoute>} />
+            <Route path="/session/:sessionId/ideas/:ideaId" element={<ProtectedRoute><IdeaDetail /></ProtectedRoute>} />
+            <Route path="/ai" element={<ProtectedRoute><AIPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
