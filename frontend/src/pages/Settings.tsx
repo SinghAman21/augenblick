@@ -4,6 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useTheme, type ThemeId } from "@/contexts/ThemeContext";
 import { Sun, Sparkles } from "lucide-react";
+import { useUser } from "@clerk/react";
+import { useEffect, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase";
 
 const THEMES: { id: ThemeId; label: string; description: string; icon: typeof Sun }[] = [
   { id: "default", label: "Dark Theme", description: "Dark theme with orange accents", icon: Sun },
@@ -12,6 +15,42 @@ const THEMES: { id: ThemeId; label: string; description: string; icon: typeof Su
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { user, isLoaded } = useUser();
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [profileEmail, setProfileEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoaded || !user?.id) return;
+
+    let cancelled = false;
+
+    async function loadProfile() {
+      const db = getSupabaseClient();
+      const { data } = await db
+        .from("profiles")
+        .select("display_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      setProfileName(data?.display_name ?? null);
+      setProfileEmail(data?.email ?? null);
+    }
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, user?.id]);
+
+  const displayName =
+    profileName?.trim() ||
+    user?.fullName?.trim() ||
+    user?.firstName?.trim() ||
+    user?.primaryEmailAddress?.emailAddress ||
+    "—";
+  const email = profileEmail?.trim() || user?.primaryEmailAddress?.emailAddress || "—";
 
   return (
     <AppLayout>
@@ -50,11 +89,19 @@ export default function SettingsPage() {
             <h3 className="text-mono text-xs text-muted-foreground uppercase tracking-widest">General</h3>
             <div className="space-y-1.5">
               <Label className="text-xs">Display Name</Label>
-              <Input defaultValue="Demo User" className="bg-muted/30 border-border" />
+              <Input
+                value={isLoaded ? displayName : "Loading..."}
+                readOnly
+                className="bg-muted/30 border-border"
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Email</Label>
-              <Input defaultValue="demo@idealab.app" className="bg-muted/30 border-border" />
+              <Input
+                value={isLoaded ? email : "Loading..."}
+                readOnly
+                className="bg-muted/30 border-border"
+              />
             </div>
           </div>
           <div className="surface-raised p-5 space-y-3 lg:col-span-2">

@@ -1,7 +1,43 @@
 import { AppLayout } from "@/components/app/AppLayout";
 import { User } from "lucide-react";
+import { useUser } from "@clerk/react";
+import { useEffect, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase";
 
 export default function Profile() {
+  const { user, isLoaded } = useUser();
+  const [profileName, setProfileName] = useState<string | null>(null);
+  const [profileEmail, setProfileEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoaded || !user?.id) return;
+
+    let cancelled = false;
+
+    async function loadProfile() {
+      const db = getSupabaseClient();
+      const { data } = await db
+        .from("profiles")
+        .select("display_name, email")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      setProfileName(data?.display_name ?? null);
+      setProfileEmail(data?.email ?? null);
+    }
+
+    loadProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, user?.id]);
+
+  const nameToShow =
+    profileName?.trim() || user?.fullName?.trim() || user?.firstName?.trim() || user?.primaryEmailAddress?.emailAddress || "—";
+  const emailToShow = profileEmail?.trim() || user?.primaryEmailAddress?.emailAddress || "—";
+
   return (
     <AppLayout>
       <div className="p-6 lg:p-8 w-full max-w-7xl mx-auto">
@@ -11,8 +47,8 @@ export default function Profile() {
             <User className="w-7 h-7 text-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">Demo User</h2>
-            <p className="text-xs text-muted-foreground text-mono">demo@idealab.app</p>
+            <h2 className="text-lg font-semibold">{isLoaded ? nameToShow : "Loading..."}</h2>
+            <p className="text-xs text-muted-foreground text-mono">{isLoaded ? emailToShow : "Loading..."}</p>
           </div>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl">
