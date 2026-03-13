@@ -1,7 +1,6 @@
 import type { Request, Response } from 'express';
 import { env } from '../config/env.js';
 import { asyncHandler } from '../middleware/async-handler.js';
-import { ApiError } from '../lib/api-error.js';
 
 const GROQ_BASE = 'https://api.groq.com/openai/v1';
 const GROQ_MODEL = 'llama-3.1-8b-instant';
@@ -21,6 +20,7 @@ function buildUserMessage(
   body: { prompt?: string; context?: string; ideas?: string[] }
 ): string {
   const { prompt = '', context = '', ideas = [] } = body;
+
   switch (action) {
     case 'generate':
       return prompt.trim()
@@ -42,42 +42,6 @@ function buildUserMessage(
   }
 }
 
-/** Build a fallback response when XAI_API_KEY is not set */
-function fallbackResponse(
-  action: string,
-  body: { prompt?: string; ideas?: string[] }
-): string {
-  const prompt = (body.prompt || '').trim();
-  const ideas = body.ideas || [];
-  const note = '\n\n---\n💡 To get real AI suggestions, add XAI_API_KEY to your backend .env (get a key at x.ai).';
-
-  switch (action) {
-    case 'generate':
-      if (prompt) {
-        return `Here are some starter ideas for "${prompt.slice(0, 50)}${prompt.length > 50 ? '…' : ''}":\n\n1. Explore user research and pain points\n2. Prototype a minimal version\n3. Consider integration with existing tools\n4. Add a feedback loop for iteration\n5. Measure impact with clear metrics${note}`;
-      }
-      return `Starter ideas for a brainstorming session:\n\n1. User-centric feature improvement\n2. Automation to save time\n3. Better onboarding flow\n4. Analytics and insights dashboard\n5. Collaboration or sharing feature${note}`;
-    case 'expand':
-      if (prompt) {
-        return `Expanded idea: "${prompt.slice(0, 60)}${prompt.length > 60 ? '…' : ''}"\n\n• Description: Add more detail, user benefits, and success criteria.\n• Variations: Try a lighter version and a premium version.\n• Next steps: Validate with a small group, then iterate.${note}`;
-      }
-      return `Provide an idea in the prompt to expand it. You’ll get description, variations, and next steps.${note}`;
-    case 'summarize':
-      if (ideas.length) {
-        return `Summary of ${ideas.length} idea(s):\n\n• Main themes: Review the list above for recurring topics.\n• Top ideas: Prioritize by impact and feasibility.\n• Next steps: Pick 1–2 to prototype and get feedback.${note}`;
-      }
-      return `Add some ideas to this session, then run Summary again for themes and next steps.${note}`;
-    case 'related':
-      if (prompt || ideas.length) {
-        return `Related directions:\n\n1. "What if" version of the same idea\n2. Opposite or complementary approach\n3. Different audience or use case\n4. Simpler or more advanced variant\n5. Integration with another product${note}`;
-      }
-      return `Share an idea or open a session with ideas, then ask for related directions.${note}`;
-    default:
-      return `You asked: "${prompt || 'How can you help?'}"\n\nTry the Generate tab for new ideas, Summary for session recap, or Elaboration to expand an idea. For real AI, add GROQ_API_KEY (free) or XAI_API_KEY to backend .env.${note}`;
-  }
-}
-
-/** Call Groq (free tier) or X.AI (Grok); same OpenAI-compatible response shape */
 async function callLLM(
   apiBase: string,
   apiKey: string,
@@ -104,45 +68,40 @@ async function callLLM(
 
   if (!response.ok) {
     const errText = await response.text();
-    throw new ApiError(response.status >= 400 ? response.status : 502, errText || response.statusText || 'AI request failed');
+    throw new Error(errText || response.statusText || 'AI request failed');
   }
 
   const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
   return data.choices?.[0]?.message?.content?.trim() ?? 'No response generated.';
 }
 
-/** POST /ai – generate, expand, summarize, related, chat. Uses Groq (free) if GROQ_API_KEY set, else XAI if XAI_API_KEY set. On invalid key or API error, returns fallback text so the app keeps working. */
+/** POST /api/ai — tries Groq first (free), then XAI. Returns 503 if neither key is set. */
 export const postAI = asyncHandler(async (req: Request, res: Response) => {
   const body = req.body as { action?: string; prompt?: string; context?: string; ideas?: string[] };
   const action = body.action || 'chat';
   const sys = systemPrompts[action] || systemPrompts.chat;
   const userContent = buildUserMessage(action, body);
-  const keyInvalidNote = '\n\n---\n⚠️ Your API key was rejected. For free AI: remove any XAI_API_KEY from backend .env, add GROQ_API_KEY from https://console.groq.com, then restart the backend.';
 
-  if (env.GROQ_API_KEY) {
-    try {
-      const text = await callLLM(GROQ_BASE, env.GROQ_API_KEY, GROQ_MODEL, sys, userContent);
-      res.json({ text });
-      return;
-    } catch {
-      const text = fallbackResponse(action, body) + keyInvalidNote;
-      res.json({ text });
-      return;
-    }
+  if (!env.GROQ_API_KEY && !env.XAI_API_KEY) {
+    res.status(503).json({
+      error: 'AI not configured',
+      message: 'Set GROQ_API_KEY (free at console.groq.com) or XAI_API_KEY in the backend .env to enable AI.',
+    });
+    return;
   }
 
-  if (env.XAI_API_KEY) {
-    try {
-      const text = await callLLM(XAI_BASE, env.XAI_API_KEY, XAI_MODEL, sys, userContent);
-      res.json({ text });
-      return;
-    } catch {
-      const text = fallbackResponse(action, body) + keyInvalidNote;
-      res.json({ text });
-      return;
-    }
-  }
+  try {
+    let text: string;
 
-  const text = fallbackResponse(action, body);
-  res.json({ text });
+    if (env.GROQ_API_KEY) {
+      text = await callLLM(GROQ_BASE, env.GROQ_API_KEY, GROQ_MODEL, sys, userContent);
+    } else {
+      text = await callLLM(XAI_BASE, env.XAI_API_KEY!, XAI_MODEL, sys, userContent);
+    }
+
+    res.json({ text });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'AI request failed.';
+    res.status(502).json({ error: 'AI request failed', message });
+  }
 });

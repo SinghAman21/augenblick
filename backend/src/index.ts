@@ -41,7 +41,12 @@ app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ── Health check ───────────────────────────────────────
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, uptime: process.uptime(), aiConfigured: !!(env.GROQ_API_KEY || env.XAI_API_KEY) });
+  res.json({
+    ok: true,
+    service: 'augenblick-backend',
+    uptime: process.uptime(),
+    aiConfigured: !!(env.GROQ_API_KEY || env.XAI_API_KEY),
+  });
 });
 
 // ── Routes ─────────────────────────────────────────────
